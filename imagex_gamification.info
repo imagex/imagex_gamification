@@ -1,0 +1,14 @@
+name = ImageX Gamification
+description = Sets up basic gamification. (Granting of points for different actions)
+core = 7.x
+package = ImageX
+version = 7.x-1.0-dev
+project = imagex_gamification
+dependencies[] = entity
+dependencies[] = rules
+dependencies[] = userpoints_rules
+
+features[features_api][] = api:2
+features[rules_config][] = rules_imagex_userpoints_comment
+features[rules_config][] = rules_imagex_userpoints_forum
+features[rules_config][] = rules_imagex_userpoints_question
