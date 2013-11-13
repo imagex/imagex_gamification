@@ -1,0 +1,342 @@
+<?php
+
+/**
+ * @file
+ * Module for the UserBadges Entity
+ */  
+
+
+/**
+ * Implement hook_entity_info().
+ */
+function imagex_userbadge_entity_info() {
+  $return['imagex_userbadge'] = array(
+    'label' => t('User Badge'),
+    // The entity class and controller class extend the classes provided by the
+    // Entity API
+    'entity class' => 'ImagexUserBadge',
+    'controller class' => 'ImagexUserBadgeController',
+    'base table' => 'imagex_userbadge',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+        'id' => 'badge_id',
+    ),
+    // Bundles are defined by the badge types below
+    'bundles' => array(
+      'badge' => array(
+        'label' => t('Badge'),
+        'admin' => array(
+          'path' => 'admin/config/people/badges/badge',
+          'access arguments' => array('administer user badges'),
+        ),
+      ),
+    ),
+    'label callback' => 'entity_class_label',
+    'uri callback' => 'entity_class_uri',
+    'creation callback' => 'imagex_userbadge_create',
+    'access callback' => 'imagex_userbadge_access',
+    'module' => 'imagex_userbadge',
+    // The information below is used by the badgeUIController (which extends the EntityDefaultUIController)
+    'admin ui' => array(
+      'path' => 'admin/people/badges',
+      'file' => 'imagex_userbadge.admin.inc',
+      'controller class' => 'ImagexUserBadgeUIController',
+      'menu wildcard' => '%imagex_userbadge',
+    ),
+  );
+
+  return $return;
+}
+  
+
+/**
+ * Implements hook_permission().
+ */
+function imagex_userbadge_permission() {
+  // We set up permisssions to manage entity types, manage all entities and the
+  // permissions for each individual entity
+  $permissions = array(
+    'administer user badges' => array(
+      'title' => t('Administer User Badges'),
+      'description' => t('Create, edit, delete, and assign User Badges'),
+    ),  
+  );
+  
+  return $permissions;  
+}
+
+
+/**
+ * Determines whether the given user has access to a badge.
+ *
+ * @param $op
+ *   The operation being performed. One of 'view', 'update', 'create', 'delete'
+ *   or just 'edit' (being the same as 'create' or 'update').
+ * @param $badge
+ *   Optionally a badge or a badge type to check access for. If nothing is
+ *   given, access for all badges is determined.
+ * @param $account
+ *   The user to check for. Leave it to NULL to check for the global user.
+ * @return boolean
+ *   Whether access is allowed or not.
+ */
+function imagex_userbadge_access($op = NULL, $badge = NULL, $account = NULL) {
+  if (user_access('administer user badges', $account)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Fetch a Badge object. Make sure that the wildcard you choose 
+ * in the badge entity definition fits the function name here.
+ *
+ * @param $badge_id
+ *   Integer specifying the badge id.
+ * @param $reset
+ *   A boolean indicating that the internal cache should be reset.
+ * @return
+ *   A fully-loaded $badge object or FALSE if it cannot be loaded.
+ *
+ * @see badge_load_multiple()
+ */
+function imagex_userbadge_load($badge_id, $reset = FALSE) {
+  $badges = imagex_userbadge_load_multiple(array($badge_id), array(), $reset);
+  return reset($badges);
+}
+
+
+/**
+ * Load multiple badges based on certain conditions.
+ *
+ * @param $badge_ids
+ *   An array of badge IDs.
+ * @param $conditions
+ *   An array of conditions to match against the {badge} table.
+ * @param $reset
+ *   A boolean indicating that the internal cache should be reset.
+ * @return
+ *   An array of badge objects, indexed by badge_id.
+ *
+ * @see entity_load()
+ * @see imagex_userbadge_load()
+ */
+function imagex_userbadge_load_multiple($badge_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('imagex_userbadge', $badge_ids, $conditions, $reset);
+}
+
+
+/**
+ * Deletes a badge.
+ */
+function imagex_userbadge_delete(ImagexUserBadge $badge) {
+  $badge->delete();
+}
+
+
+/**
+ * Delete multiple badges.
+ *
+ * @param $badge_ids
+ *   An array of badge IDs.
+ */
+function imagex_userbadge_delete_multiple(array $badge_ids) {
+  entity_get_controller('imagex_userbadge')->delete($badge_ids);
+}
+
+
+/**
+ * Create a badge object.
+ */
+function imagex_userbadge_create($values = array()) {
+  return entity_get_controller('imagex_userbadge')->create($values);
+}
+
+
+/**
+ * Saves a badge to the database.
+ *
+ * @param $badge
+ *   The badge object.
+ */
+function imagex_userbadge_save(ImagexUserBadge $badge) {
+  return $badge->save();
+}
+
+
+/**
+ * URI callback for badges
+ */
+function imagex_userbadge_uri(ImagexUserBadge $badge){
+  return array(
+    'path' => 'badge/' . $badge->badge_id,
+  );
+}
+
+
+/**
+ * Menu title callback for showing individual entities
+ */
+function imagex_userbadge_page_title(ImagexUserBadge $badge){
+  return $badge->name;
+}
+
+
+/**
+ * Sets up content to show an individual badge
+ * @todo - get rid of drupal_set_title();
+ */
+function imagex_userbadge_page_view($badge, $view_mode = 'full') {    
+  $controller = entity_get_controller('imagex_userbadge');  
+  $content = $controller->view(array($badge->badge_id => $badge));
+  drupal_set_title($badge->name);
+  return $content;
+}
+
+
+/**
+ * Implements hook_views_api().
+ */
+function imagex_userbadge_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'imagex_userbadge') . '/views',
+  );
+}
+
+
+/**
+ * Implement hook_theme().
+ */
+function imagex_userbadge_theme() {
+  return array(
+    'imagex_userbadge' => array(
+      'render element' => 'elements',
+      'template' => 'imagex_userbadge',
+    ),
+  );
+}  
+
+/**
+ * Implements hook_menu().
+ */
+function imagex_userbadge_menu() { 
+  $items['admin/config/people/badges'] = array(
+   'title' => 'Badges',
+   'description' => 'Configure user badges.',
+   'position' => 'left',
+   'weight' => -20,
+   'page callback' => 'drupal_get_form',
+   'page arguments' => array('imagex_userbadge_admin_page'),
+   'access arguments' => array('administer user badges'),
+   'file' => 'imagex_userbadge.admin.inc',
+  );
+  $items['admin/config/people/badges/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  
+  return $items;
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function imagex_userbadge_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  if ($root_path == 'admin/people/badges') {
+    $item = menu_get_item('admin/people/badges/add');
+    if ($item['access']) {
+      $data['actions']['output'][] = array(
+        '#theme' => 'menu_local_action',
+        '#link' => $item,
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function imagex_userbadge_field_extra_fields() { 
+  $fields['imagex_userbadge']['badge'] = array(
+    'form' => array(
+      'name' => array(
+        'label' => 'Badge Name',
+        'description' => t('User Badge module element'),
+        'weight' => -10,
+      ),
+    ),
+  );
+  
+  return $fields;
+}
+
+/**
+ * The class used for badge entities
+ */
+class ImagexUserBadge extends Entity {
+  
+  public function __construct($values = array()) {
+    parent::__construct($values, 'imagex_userbadge');
+  }
+
+  protected function defaultLabel() {
+    return $this->name;
+  }
+
+  protected function defaultUri() {
+    return array('path' => 'badge/' . $this->badge_id);
+  }
+  
+  
+}
+
+/**
+ * The Controller for badge entities
+ */
+class ImagexUserBadgeController extends EntityAPIController {
+  public function __construct($entityType) {
+    parent::__construct($entityType);
+  }
+
+
+  /**
+   * Create a badge - we first set up the values that are specific
+   * to our badge schema but then also go through the EntityAPIController
+   * function.
+   * 
+   * @param $type
+   *   The machine-readable type of the badge.
+   *
+   * @return
+   *   A badge object with all default fields initialized.
+   */
+  public function create(array $values = array()) {
+    // Add values that are specific to our badge
+    $values += array( 
+      'badge_id' => '',
+      'is_new' => TRUE,
+      'title' => '',
+      'created' => '',
+      'changed' => '',
+      'data' => '',
+    );
+    
+    $badge = parent::create($values);
+    return $badge;
+  }
+  
+  /**
+   * Overriding the buldContent function to add entity specific fields
+   */
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+    $content = parent::buildContent($entity, $view_mode, $langcode, $content);
+    $content['imagex_userbadge_sample'] =  array(
+      '#markup' => '<div>Badge Badge Badge</div>',
+    );
+
+    return $content;
+  }
+  
+}
