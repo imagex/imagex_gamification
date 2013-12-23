@@ -90,7 +90,6 @@ function imagex_userbadge_views_data_alter(&$data) {
  */
 function imagex_userbadge_views_default_views() {
   $views = array();
-  dpm(__FUNCTION__);
   // Default admin page for Badges
   $view = new view();
   $view->name = 'imagex_userbadge';
