@@ -18,7 +18,7 @@ class imagex_userbadge_handler_badge_operations_field extends views_handler_fiel
 
   function render($values) {
 
-    $links = menu_contextual_links('imagex_userbadge', 'admin/people/badges/badge', array($this->get_value($values, 'badge_id')));
+    $links = menu_contextual_links('imagex_userbadge', 'badge', array($this->get_value($values, 'badge_id')));
     
     if (!empty($links)) {
       return theme('links', array('links' => $links, 'attributes' => array('class' => array('links', 'inline', 'operations'))));

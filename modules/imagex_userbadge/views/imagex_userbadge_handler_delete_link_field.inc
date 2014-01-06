@@ -24,6 +24,6 @@ class imagex_userbadge_handler_delete_link_field extends imagex_userbadge_handle
     $text = !empty($this->options['text']) ? $this->options['text'] : t('delete');
     $badge_id = $values->{$this->aliases['badge_id']};
     
-    return l($text, 'admin/people/badges/badge/' . $badge_id . '/delete');
+    return l($text, 'badge/' . $badge_id . '/delete');
   }
 }

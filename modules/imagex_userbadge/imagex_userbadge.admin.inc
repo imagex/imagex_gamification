@@ -51,17 +51,24 @@ class ImagexUserBadgeUIController extends EntityDefaultUIController {
       'file' => 'imagex_userbadge.admin.inc',
       'file path' => drupal_get_path('module', $this->entityInfo['module'])
     );
-    $items[$this->path . '/badge/' . $wildcard . '/edit'] = array(
+    $items['badge/' . $wildcard . '/edit'] = array(
       'title' => 'Edit',
-      'type' => MENU_DEFAULT_LOCAL_TASK,
-      'weight' => -10,
+      'type' => MENU_LOCAL_TASK,
+      'weight' => -5,
       'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'page callback' => 'imagex_userbadge_form_wrapper',
+      'page arguments' => array(1),
+      'access callback' => 'imagex_userbadge_access',
+      'weight' => 0,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'file' => 'imagex_userbadge.admin.inc',
+      'file path' => drupal_get_path('module', $this->entityInfo['module'])
     );
     
-    $items[$this->path . '/badge/' . $wildcard . '/delete'] = array(
+    $items['badge/' . $wildcard . '/delete'] = array(
       'title' => 'Delete',
       'page callback' => 'imagex_userbadge_delete_form_wrapper',
-      'page arguments' => array($id_count + 1),
+      'page arguments' => array(1),
       'access callback' => 'imagex_userbadge_access',
       'type' => MENU_LOCAL_TASK,
       'context' => MENU_CONTEXT_INLINE,
@@ -80,6 +87,12 @@ class ImagexUserBadgeUIController extends EntityDefaultUIController {
       'access callback' => 'imagex_userbadge_access',
       'access arguments' => array('view', 1),
       'type' => MENU_CALLBACK,
+    );
+    
+    $items['badge/' . $wildcard . '/view'] = array(
+      'title' => 'View',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
     );
     return $items;
   }
@@ -151,16 +164,10 @@ function imagex_userbadge_edit_form($form, &$form_state, $badge) {
     '#required' => TRUE,
     '#weight' => -5,
   );
-  
-  $form['data']['#tree'] = TRUE;
-  $form['data']['sample_data'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('An interesting badge switch'),
-    '#default_value' => isset($badge->data['sample_data']) ? $badge->data['sample_data'] : 1,
-  );
 
   // Add the field related form elements.
   $form_state['imagex_userbadge'] = $badge;
+
   field_attach_form('imagex_userbadge', $badge, $form, $form_state);
 
   $form['actions'] = array(
@@ -229,7 +236,7 @@ function imagex_userbadge_edit_form_submit(&$form, &$form_state) {
   $badge->changed = time();
   
   $badge->save();
-  $form_state['redirect'] = 'admin/people/badges';
+  $form_state['redirect'] = 'badge/' . $badge->badge_id;
 }
 
 /**
