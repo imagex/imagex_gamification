@@ -21,6 +21,7 @@ function imagex_userbadge_entity_info() {
     'entity keys' => array(
         'id' => 'badge_id',
         'bundle' => 'type',
+        'uuid' => 'uuid',
     ),
     // Bundles are defined by the badge types below
     'bundles' => array(
@@ -50,6 +51,7 @@ function imagex_userbadge_entity_info() {
         'custom settings' => TRUE,
       ),
     ),
+    'uuid' => TRUE,
   );
 
   return $return;
@@ -291,6 +293,182 @@ function imagex_userbadge_field_extra_fields() {
 }
 
 /**
+ * Implements hook_user_load().
+ */
+function imagex_userbadge_user_load($users) { 
+  $result = db_query('SELECT uid, badge_id FROM {imagex_userbadge_relationship} WHERE uid IN (:uids)', array(':uids' => array_keys($users)));
+  foreach ($result as $record) {
+    $users[$record->uid]->badges[] = $record->badge_id;
+  }
+}
+
+/**
+ * Implements hook_action_info().
+ */
+function imagex_userbadge_action_info() { 
+  return array(
+    'imagex_userbadge_relate_action' => array(
+      'type' => 'user',
+      'label' => t('Add a Userbadge to a User'),
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+    'imagex_userbadge_unrelate_action' => array(
+      'type' => 'user',
+      'label' => t('Remove a Userbadge from a User'),
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+  );
+}
+
+/**
+ * Adds a user badge to a user
+ */
+function imagex_userbadge_relate_action(&$entity, $context = array()) {
+  
+}
+
+/**
+ * Removes a user badge from a user
+ */
+function imagex_userbadge_unrelate_action(&$entity, $context = array()) {
+  
+}
+
+
+/**
+ * Implements hook_rules_condition_info()
+ */
+function imagex_userbadge_rules_condition_info() {
+  return array(
+    'imagex_userbadge_condition_check_points' => array(
+      'label' => t('Check how many !points a user has', userpoints_translation()),
+      'named parameter' => TRUE,
+      'parameter' => array(
+        'user' => array(
+          'type' => 'user',
+          'label' => t('User'),
+          'description' => t('The user whose !points to check', userpoints_translation()),
+        ),
+        'tid' => array(
+          'label' => t('!Points category', userpoints_translation()),
+          'type' => 'integer',
+          'options list' => 'userpoints_rules_get_categories',
+        ),
+        'threshold' => array(
+          'type' => 'integer',
+          'label' => t('Threshold'),
+          'description' => t('Compare the number of !points the user has to this number', userpoints_translation()),
+        ),
+        'comparison' => array(
+          'type' => 'text',
+          'label' => t('Comparison'),
+          'description' => t('How to compare the user\'s !points with the threshold', userpoints_translation()),
+          'options list' => 'imagex_userbadge_condition_get_comparisons',
+        ),
+      ),
+      'group' => t('!Points', userpoints_translation()),
+    ),
+  );
+}
+
+/**
+ * Rules condition - compare the user's points to a threshold
+ */
+function imagex_userbadge_condition_check_points($params) {
+  $points = userpoints_get_current_points($params['user']->uid, $params['tid']);
+  $threshold = $params['threshold'];
+  switch ($params['comparison']) {
+    case 'lt':
+      if ($threshold > $points) { return true; } else { return false; }
+      break;
+    case 'le':
+      if ($threshold >= $points) { return true; } else { return false; }
+      break;
+    case 'eq':
+      if ($threshold == $points) { return true; } else { return false; }
+      break;
+    case 'ge':
+      if ($threshold <= $points) { return true; } else { return false; }
+      break;
+    case 'gt':
+      if ($threshold < $points) { return true; } else { return false; }
+      break;
+  }
+  return false;
+}
+
+/**
+ * Returns options for ways to compare a number to a number of points.
+ */
+function imagex_userbadge_condition_get_comparisons() {
+  return array(
+    'lt' => t('Less than'),
+    'le' => t('Less than or equal to'),
+    'eq' => t('Equal to'),
+    'ge' => t('Greater than or equal to'),
+    'gt' => t('Greater than'),
+  );
+}
+
+/**
+ * Implements hook_preprocess_imagex_userbadge().
+ */
+function template_preprocess_imagex_userbadge(&$variables) {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  $badge = $variables['elements']['#entity'];
+  $variables['imagex_userbadge'] = $badge;
+  
+  $variables['date']      = format_date($badge->created);
+  $variables['name']      = theme('username', array('account' => $badge));
+
+  $uri = entity_uri('imagex_userbadge', $badge);
+  $variables['url']  = url($uri['path'], $uri['options']);
+  $variables['title']     = check_plain($badge->name);
+  if (isset($variables['elements']['#page'])) {
+    // If set by the caller, respect the page property.
+    $variables['page'] = $variables['elements']['#page'];
+  }
+  else {
+    // Else, try to automatically detect it.
+    $variables['page'] = $uri && $uri['path'] == $_GET['q'];
+  }
+  
+  // Flatten the node object's member fields.
+  $variables = array_merge((array) $badge, $variables);
+
+  // Helpful $content variable for templates.
+  $variables += array('content' => array());
+  foreach (element_children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+
+  // Make the field variables available with the appropriate language.
+  field_attach_preprocess('imagex_userbadge', $badge, $variables['content'], $variables);
+
+  // Clean up name so there are no underscores.
+  $variables['theme_hook_suggestions'][] = 'imagex_userbadge__' . $badge->badge_id;
+}
+
+/**
+ * Implements hook_features_api().
+ */
+function imagex_userbadge_features_api() { 
+  $components = array();
+
+  $components['uuid_badge'] = array(
+    'name' => t('Badges'),
+    'feature_source' => TRUE,
+    'default_hook' => 'uuid_features_default_badges',
+    'default_file' => FEATURES_DEFAULTS_INCLUDED,
+    'file' => drupal_get_path('module', 'imagex_userbadge') . '/features/uuid_badge.features.inc',
+  );
+  
+  return $components;
+}
+
+/**
  * The class used for badge entities
  */
 class ImagexUserBadge extends Entity {
@@ -345,12 +523,63 @@ class ImagexUserBadgeController extends EntityAPIController {
     return $badge;
   }
   
-  /**
-   * Overriding the buldContent function to add entity specific fields
-   */
   public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
-    $content = parent::buildContent($entity, $view_mode, $langcode, $content);
-    return $content;
+    // Remove previously built content, if exists.
+    $entity->content = $content;
+    $langcode = isset($langcode) ? $langcode : $GLOBALS['language_content']->language;
+    // Add in fields.
+    if (!empty($this->entityInfo['fieldable'])) {
+      // Perform the preparation tasks if they have not been performed yet.
+      // An internal flag prevents the operation from running twice.
+      $key = isset($entity->{$this->idKey}) ? $entity->{$this->idKey} : NULL;
+      field_attach_prepare_view($this->entityType, array($key => $entity), $view_mode);
+      $entity->content += field_attach_view($this->entityType, $entity, $view_mode, $langcode);
+    }
+    // Invoke hook_ENTITY_view() to allow modules to add their additions.
+    if (module_exists('rules')) {
+      rules_invoke_all($this->entityType . '_view', $entity, $view_mode, $langcode);
+    }
+    else {
+      module_invoke_all($this->entityType . '_view', $entity, $view_mode, $langcode);
+    }
+    module_invoke_all('entity_view', $entity, $this->entityType, $view_mode, $langcode);
+    $build = $entity->content;
+    unset($entity->content);
+    return $build;
   }
-  
+
+  /**
+   * Implements EntityAPIControllerInterface.
+   */
+  public function view($entities, $view_mode = 'full', $langcode = NULL, $page = NULL) {
+    // For Field API and entity_prepare_view, the entities have to be keyed by
+    // (numeric) id.
+    $entities = entity_key_array_by_property($entities, $this->idKey);
+    if (!empty($this->entityInfo['fieldable'])) {
+      field_attach_prepare_view($this->entityType, $entities, $view_mode);
+    }
+    entity_prepare_view($this->entityType, $entities);
+    $langcode = isset($langcode) ? $langcode : $GLOBALS['language_content']->language;
+
+    $view = array();
+    foreach ($entities as $entity) {
+      $build = entity_build_content($this->entityType, $entity, $view_mode, $langcode);
+      $build += array(
+        // If the entity type provides an implementation, use this instead the
+        // generic one.
+        // @see template_preprocess_entity()
+        '#theme' => 'imagex_userbadge',
+        '#entity_type' => $this->entityType,
+        '#entity' => $entity,
+        '#view_mode' => $view_mode,
+        '#language' => $langcode,
+        '#page' => $page,
+      );
+      // Allow modules to modify the structured entity.
+      drupal_alter(array($this->entityType . '_view', 'entity_view'), $build, $this->entityType);
+      $key = isset($entity->{$this->idKey}) ? $entity->{$this->idKey} : NULL;
+      $view[$this->entityType][$key] = $build;
+    }
+    return $view;
+  }
 }

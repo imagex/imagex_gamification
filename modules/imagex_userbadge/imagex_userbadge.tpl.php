@@ -3,7 +3,6 @@
  * User Badge Template
  */
 ?>
-<?php print kpr(get_defined_vars()); ?>
 <div id="user-badge-<?php print $imagex_userbadge->badge_id;?>"  class="<?php print $classes; ?> clearfix"<?php print $attributes; ?>>
   
   <?php print render($title_prefix); ?>

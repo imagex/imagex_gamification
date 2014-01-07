@@ -318,5 +318,6 @@ function imagex_userbadge_set_breadcrumb() {
  * Settings form for User Badges
  */
 function imagex_userbadge_admin_page($form, &$form_state) {
-  
+  print('yes');
+  return $form;
 }
