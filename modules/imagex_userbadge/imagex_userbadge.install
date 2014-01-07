@@ -55,12 +55,12 @@ function imagex_userbadge_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'data' => array(
-        'type' => 'blob',
-        'not null' => FALSE,
-        'size' => 'big',
-        'serialize' => TRUE,
-        'description' => 'A serialized array of additional data.',
+      'uuid' => array(
+        'description' => 'The uuid of the badge',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
       ),
     ),
     'primary key' => array('badge_id'),
@@ -68,5 +68,87 @@ function imagex_userbadge_schema() {
       'type' => array('type'),
     ),
   );
+  $schema['imagex_userbadge_relationship'] = array(
+    'description' => 'The base table for badge relationships.',
+    'fields' => array(
+      'badge_id' => array(
+        'description' => 'Primary Key: Identifier for a badge.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The {user}.uid of the user.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('badge_id', 'uid'),
+  );
   return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function imagex_userbadge_install() { 
+  if (module_exists('image')) {
+    // Add or remove the body field, as needed.
+    $field = field_info_field('badge_image');
+    $instance = field_info_instance('imagex_userbadge', 'badge_image', 'badge');
+    if (empty($field)) {
+      $field = array(
+        'field_name' => 'badge_image',
+        'type' => 'image',
+        'entity_types' => array('imagex_userbadge'),
+      );
+      $field = field_create_field($field);
+    }
+    if (empty($instance)) {
+      $instance = array(
+        'field_name' => 'badge_image',
+        'entity_type' => 'imagex_userbadge',
+        'bundle' => 'badge',
+        'label' => 'Badge Image',
+        'widget' => array('type' => 'image_image'),
+        'settings' => array(
+          'progress_indicator' => 'throbber',
+          'preview_image_style' => 'thumbnail',
+        ),
+      );
+      $instance = field_create_instance($instance);
+    }
+  }
+  // Add or remove the body field, as needed.
+  $field = field_info_field('badge_description');
+  $instance = field_info_instance('imagex_userbadge', 'badge_description', 'badge');
+  if (empty($field)) {
+    $field = array(
+      'field_name' => 'badge_description',
+      'type' => 'text_with_summary',
+      'entity_types' => array('imagex_userbadge'),
+    );
+    $field = field_create_field($field);
+  }
+  if (empty($instance)) {
+    $instance = array(
+      'field_name' => 'badge_description',
+      'entity_type' => 'imagex_userbadge',
+      'bundle' => 'badge',
+      'label' => 'Description',
+      'widget' => array('type' => 'text_textarea_with_summary'),
+      'settings' => array('display_summary' => TRUE),
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'text_default',
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'type' => 'text_summary_or_trimmed',
+        ),
+      ),
+    );
+    $instance = field_create_instance($instance);
+  }
 }

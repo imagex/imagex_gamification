@@ -23,6 +23,6 @@ class imagex_userbadge_handler_edit_link_field extends imagex_userbadge_handler_
     $text = !empty($this->options['text']) ? $this->options['text'] : t('edit');
     $badge_id = $values->{$this->aliases['badge_id']};
     
-    return l($text, 'admin/people/badges/badge/' . $badge_id . '/edit');
+    return l($text, 'badge/' . $badge_id . '/edit');
   }
 }
